@@ -1,0 +1,5 @@
+apscheduler
+requests
+arrow
+cloudscraper
+schedule
