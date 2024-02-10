@@ -26,8 +26,7 @@
     "url": "https://github.com/nightscout/cgm-remote-monitor/issues"
   },
   "scripts": {
-    "preinstall": "cd dm2nsc && python3 -m pip install -r requirements.txt",
-    "start": "python3 dm2nsc/cronjob.py & node lib/server/server.js",
+    "start": "node lib/server/server.js",
     "test": "env-cmd -f ./my.test.env mocha --timeout 5000 --require ./tests/hooks.js -exit ./tests/*.test.js",
     "test-single": "env-cmd -f ./my.test.env mocha --timeout 5000 --require ./tests/hooks.js --exit ./tests/$TEST.test.js",
     "test-ci": "env-cmd -f ./tests/ci.test.env nyc --reporter=lcov --reporter=text-summary mocha --timeout 5000 --require ./tests/hooks.js --exit ./tests/*.test.js",
