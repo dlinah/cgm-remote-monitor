@@ -21,11 +21,13 @@
 // Description: Basic web server to display data from Dexcom G4.  Requires a database that contains
 // the Dexcom SGV data.
 'use strict';
-const env = require('./env')( );
+
+// Optional: legacy DM2NSC HTTP polling (kept here in case you still use it)
+const env = require('./env')();
 const http = require('http');
 
 const interval = 5000; // Set the interval in milliseconds (e.g., 5000 ms = 5 seconds)
-const endpoint = env.DM2NSC_SERVER+'/getdata';
+const endpoint = env.DM2NSC_SERVER + '/getdata';
 
 function fetchData() {
   http.get(endpoint, (res) => {
@@ -48,5 +50,9 @@ function fetchData() {
 // Set interval to call fetchData
 setInterval(fetchData, interval);
 
+// Start the Python-based Diabetes-M -> Nightscout sync job scheduler
+require('./dm2nsc/runPyJob');
+
+// Start the main Nightscout server
 require('./lib/server/server');
 
