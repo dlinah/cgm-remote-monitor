@@ -1,3 +1,5 @@
 requests
 arrow
 cloudscraper
+python-dotenv
+certifi

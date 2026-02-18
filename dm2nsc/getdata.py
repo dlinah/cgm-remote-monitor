@@ -1,12 +1,37 @@
 import requests, json, arrow, hashlib, urllib, datetime
 import cloudscraper
 import os
+from pathlib import Path
+from typing import Iterable, List, Dict, Any
 
-USERNAME = os.environ['USERNAME']
-PASSWORD = os.environ['PASSWORD']
-NS_URL = os.environ['NS_URL']
-NS_SECRET = os.environ['NS_SECRET']
+import certifi
+from dotenv import load_dotenv
+
+# Load .env from script dir or repo root (when run as python3 dm2nsc/getdata.py)
+_load_env_paths = [
+	Path(__file__).resolve().parent / ".env",
+	Path(__file__).resolve().parent.parent / ".env",
+]
+for _p in _load_env_paths:
+	if _p.exists():
+		load_dotenv(_p)
+		break
+
+def _required_env(name: str) -> str:
+	val = os.getenv(name)
+	if not val:
+		print(f"Missing env var `{name}`. Put it in .env or export it.")
+		return None
+	return val
+
+USERNAME = os.environ['USERNAME'] or _required_env('USERNAME')
+PASSWORD = os.environ['PASSWORD'] or _required_env('PASSWORD')
+NS_URL = os.environ['NS_URL'] or _required_env('NS_URL').rstrip('/') + '/'
+NS_SECRET = os.environ['NS_SECRET'] or _required_env('NS_SECRET')
 DBM_HOST = 'https://analytics.diabetes-m.com'
+
+# Use certifi bundle so macOS/Python installs without system certs still work.
+VERIFY = certifi.where()
 
 # this is the enteredBy field saved to Nightscout
 NS_AUTHOR = "Diabetes-M (dm2nsc)"
@@ -20,7 +45,8 @@ def get_login():
 			'desktop': True
 		}
 	)
-	index = sess.get(DBM_HOST + '/login')
+	
+	index = sess.get(DBM_HOST + '/login', verify=VERIFY)
 
 	return sess.post(DBM_HOST + '/api/v1/user/authentication/login', json={
 		'username': USERNAME,
@@ -29,7 +55,7 @@ def get_login():
 	}, headers={
 		'origin': DBM_HOST,
 		'referer': DBM_HOST + '/login'
-	}, cookies=index.cookies), sess
+	}, cookies=index.cookies, verify=VERIFY), sess
 
 
 def get_entries(login, sess):
@@ -45,7 +71,7 @@ def get_entries(login, sess):
 			'toDate': -1,
 			'page_count': 90000,
 			'page_start_entry_time': 0
-		})
+		}, verify=VERIFY)
 	return entries.json()
 
 
@@ -54,12 +80,13 @@ def to_mgdl(mmol):
 
 def convert_nightscout(entries, start_time=None):
 	out = []
+	start_arrow = arrow.get(start_time) if start_time else None
 	for entry in entries:
 		bolus = entry["carb_bolus"] + entry["correction_bolus"]
 		time = arrow.get(int(entry["entry_time"])/1000).to(entry["timezone"])
 		notes = entry["notes"]
 
-		if start_time and start_time >= time:
+		if start_arrow and start_arrow >= time:
 			continue
 
 		author = NS_AUTHOR
@@ -107,16 +134,36 @@ def convert_nightscout(entries, start_time=None):
 
 	return out
 
-def upload_nightscout(ns_format):
-	upload = requests.post(NS_URL + 'api/v1/treatments?api_secret=' + NS_SECRET, json=ns_format, headers={
+def _chunked(items: List[Dict[str, Any]], chunk_size: int) -> Iterable[List[Dict[str, Any]]]:
+	for i in range(0, len(items), chunk_size):
+		yield items[i:i + chunk_size]
+
+def upload_nightscout(ns_format: List[Dict[str, Any]]):
+	# Posting tens of thousands of treatments at once can exceed nginx/client_max_body_size,
+	# resulting in HTTP 413. Upload in smaller chunks.
+	chunk_size = int(os.getenv("NS_UPLOAD_CHUNK_SIZE", "1000"))
+	if chunk_size < 1:
+		chunk_size = 1000
+
+	url = NS_URL + 'api/v1/treatments?api_secret=' + NS_SECRET
+	headers = {
 		'Accept': 'application/json',
 		'Content-Type': 'application/json',
 		'api-secret': hashlib.sha1(NS_SECRET.encode()).hexdigest()
-	})
-	print("Nightscout upload status:", upload.status_code, upload.text)
+	}
+
+	total = len(ns_format)
+	uploaded = 0
+	for idx, chunk in enumerate(_chunked(ns_format, chunk_size), start=1):
+		upload = requests.post(url, json=chunk, headers=headers, verify=VERIFY)
+		uploaded += len(chunk)
+		print(f"Nightscout upload chunk {idx}: {upload.status_code} ({uploaded}/{total})")
+		if upload.status_code >= 300:
+			print("Nightscout error body:", upload.text)
+			return
 
 def get_last_nightscout():
-	last = requests.get(NS_URL + 'api/v1/treatments?count=1000&find[enteredBy]='+urllib.parse.quote(NS_AUTHOR))
+	last = requests.get(NS_URL + 'api/v1/treatments?count=1000&find[enteredBy]='+urllib.parse.quote(NS_AUTHOR), verify=VERIFY)
 	if last.status_code == 200:
 		js = last.json()
 		if len(js) > 0:
@@ -140,11 +187,11 @@ def main():
 	ns_format = convert_nightscout(entries["logEntryList"], ns_last)
 
 	print("Converted", len(ns_format), "entries to Nightscout format")
-	print(ns_format)
 
 	print("Uploading", len(ns_format), "entries to Nightscout...")
 	upload_nightscout(ns_format)
 
 
 
-main()
+if __name__ == "__main__":
+	main()
