@@ -35,9 +35,6 @@ git clone https://github.com/dlinah/cgm-remote-monitor.git
 echo 'export NS_URL="https://my-cgm.duckdns.org/"' >> .env
 echo 'export NS_URL="https://my-cgm.duckdns.org/"' >> .bashrc
 
-// set prot to 80
-
-echo 'export PORT="80"' >> .env
 ````
 
 5. install dependencies, because the instance is too small to run the postinstall script, will need to run webpack locally and upload the files to the server
