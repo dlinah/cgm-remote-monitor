@@ -96,7 +96,7 @@ echo 'export NS_URL="https://my-cgm.duckdns.org/"' >> .bashrc
     server_name my-cgm.duckdns.org www.my-cgm.duckdns.org;
 
         location / {
-            proxy_pass http://localhost:7880;  # Your PM2 app port
+            proxy_pass http://127.0.0.1:7880;  # Your PM2 app port
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection 'upgrade';
