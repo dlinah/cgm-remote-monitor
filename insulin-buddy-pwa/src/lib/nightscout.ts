@@ -75,6 +75,7 @@ export async function fetchLatestGlucose(
 
 interface Treatment {
   insulin?: number;
+  carbs?: number;
   created_at: string;
   eventType?: string;
 }
@@ -87,7 +88,14 @@ export async function fetchIOB(
   nsUrl: string,
   secret: string,
   durationHours: number = 4
-): Promise<{ ok: boolean; iob?: number; treatments?: Treatment[]; error?: string }> {
+): Promise<{
+  ok: boolean;
+  iob?: number;
+  iobCarb?: number;
+  iobCorr?: number;
+  treatments?: Treatment[];
+  error?: string;
+}> {
   try {
     const headers = await buildHeaders(secret);
     const since = new Date(Date.now() - durationHours * 60 * 60 * 1000).toISOString();
@@ -96,14 +104,16 @@ export async function fetchIOB(
       `${baseUrl(nsUrl)}/api/v1/treatments.json?count=100&find[created_at][$gte]=${encodeURIComponent(since)}&find[insulin][$gt]=0`,
       { headers }
     );
-
+    
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-
+    
     const treatments: Treatment[] = await res.json();
+    console.log('fetchIOB response:', treatments);
     const now = Date.now();
     const durationMs = durationHours * 60 * 60 * 1000;
-
     let iob = 0;
+    let iobCarb = 0;
+    let iobCorr = 0;
     for (const t of treatments) {
       if (!t.insulin || t.insulin <= 0) continue;
       const elapsed = now - new Date(t.created_at).getTime();
@@ -111,9 +121,25 @@ export async function fetchIOB(
       // Linear decay: remaining = insulin * (1 - elapsed/duration)
       const remaining = t.insulin * (1 - elapsed / durationMs);
       iob += remaining;
+      if ((t.carbs ?? 0) > 0) {
+        iobCarb += remaining;
+      } else {
+        iobCorr += remaining;
+      }
+      console.log('Processing treatment:', t, iob);
     }
 
-    return { ok: true, iob: Math.round(iob * 100) / 100, treatments };
+    const roundedIob = Math.round(iob * 100) / 100;
+    const roundedIobCarb = Math.round(iobCarb * 100) / 100;
+    const roundedIobCorr = Math.round(iobCorr * 100) / 100;
+
+    return {
+      ok: true,
+      iob: roundedIob,
+      iobCarb: roundedIobCarb,
+      iobCorr: roundedIobCorr,
+      treatments,
+    };
   } catch (e: any) {
     console.error("fetchIOB error:", e);
     return { ok: false, error: e.message || "Network error" };

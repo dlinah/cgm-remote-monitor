@@ -11,6 +11,11 @@ const Calculator = () => {
   const [mealCarbs, setMealCarbs] = useState("");
   const [currentBg, setCurrentBg] = useState("");
   const [iob, setIob] = useState(0);
+  const [iobCarb, setIobCarb] = useState(0);
+  const [iobCorr, setIobCorr] = useState(0);
+  const [showDoseDetails, setShowDoseDetails] = useState(false);
+  const [totalDoseInput, setTotalDoseInput] = useState("");
+  const [totalDoseTouched, setTotalDoseTouched] = useState(false);
   const [logging, setLogging] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [bgAge, setBgAge] = useState<string | null>(null);
@@ -39,6 +44,8 @@ const Calculator = () => {
 
     if (iobResult.ok && iobResult.iob != null) {
       setIob(iobResult.iob);
+      setIobCarb(iobResult.iobCarb ?? 0);
+      setIobCorr(iobResult.iobCorr ?? 0);
     } else if (iobResult.error) {
       toast.error(`IOB fetch failed: ${iobResult.error}`);
     }
@@ -53,8 +60,27 @@ const Calculator = () => {
   const dose = useMemo(() => {
     const carbs = parseFloat(mealCarbs) || 0;
     const bg = parseFloat(currentBg) || settings.targetBg;
-    return calculateDose(carbs, settings.carbRatio, bg, settings.targetBg, settings.isf, iob);
-  }, [mealCarbs, currentBg, iob, settings]);
+    return calculateDose(
+      carbs,
+      settings.carbRatio,
+      bg,
+      settings.targetBg,
+      settings.isf,
+      iobCarb,
+      iobCorr
+    );
+  }, [mealCarbs, currentBg, iobCarb, iobCorr, settings]);
+
+  const carbsValue = parseFloat(mealCarbs) || 0;
+  const bgValue = parseFloat(currentBg) || settings.targetBg;
+  const rawCorrection = settings.isf > 0 ? (bgValue - settings.targetBg) / settings.isf : 0;
+  const iobTotal = iobCarb + iobCorr;
+
+  useEffect(() => {
+    if (!totalDoseTouched) {
+      setTotalDoseInput(dose.totalDose.toFixed(1));
+    }
+  }, [dose.totalDose, totalDoseTouched]);
 
   const hasInput = parseFloat(mealCarbs) > 0 || parseFloat(currentBg) > 0;
 
@@ -64,12 +90,14 @@ const Calculator = () => {
       return;
     }
     setLogging(true);
+    const totalValue = parseFloat(totalDoseInput);
+    const safeTotal = Number.isFinite(totalValue) ? totalValue : 0;
     const result = await logToNightscout(
       settings.nightscoutUrl,
       settings.nightscoutSecret,
-      dose.totalDose,
+      safeTotal,
       parseFloat(mealCarbs) || 0,
-      `Carb: ${dose.carbDose}U, Correction: ${dose.correction}U, IOB: ${dose.iob}U`
+      `Carb: ${dose.carbDose}U, Correction: ${dose.correction}U, IOB: ${dose.iob}U, Total: ${safeTotal}U`
     );
     setLogging(false);
     if (result.ok) {
@@ -115,11 +143,91 @@ const Calculator = () => {
 
       <main className="container max-w-lg py-6 space-y-5 animate-fade-in">
         {/* Dose Display */}
-        <div className="section-card text-center">
+        <button
+          type="button"
+          className="section-card text-center w-full cursor-pointer transition-colors hover:bg-muted/40"
+          onClick={() => setShowDoseDetails((prev) => !prev)}
+          aria-expanded={showDoseDetails}
+          aria-controls="dose-details"
+        >
           <p className="dose-label mb-2">Recommended Dose</p>
           <p className="dose-value">{hasInput ? dose.totalDose.toFixed(1) : "—"}</p>
           <p className="mt-1 text-sm text-muted-foreground">units</p>
-        </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {showDoseDetails ? "Hide calculation details" : "Show calculation details"}
+          </p>
+        </button>
+
+        {/* Dose Details */}
+        {hasInput && showDoseDetails && (
+          <div id="dose-details" className="section-card space-y-4 animate-fade-in">
+            <h2 className="text-sm font-semibold text-foreground">How this dose was calculated</h2>
+
+            <div className="grid gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between">
+                <span>Meal Carbs</span>
+                <span className="font-mono text-foreground">{carbsValue.toFixed(1)} g</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Current BG</span>
+                <span className="font-mono text-foreground">
+                  {bgValue.toFixed(0)} mg/dL
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Target BG</span>
+                <span className="font-mono text-foreground">{settings.targetBg} mg/dL</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Carb Ratio</span>
+                <span className="font-mono text-foreground">1:{settings.carbRatio}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>ISF</span>
+                <span className="font-mono text-foreground">{settings.isf}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>IOB (carb / corr)</span>
+                <span className="font-mono text-foreground">
+                  {iobCarb.toFixed(1)}U / {iobCorr.toFixed(1)}U
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>IOB total</span>
+                <span className="font-mono text-foreground">{iobTotal.toFixed(1)}U</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Carb dose</span>
+                <span className="font-mono text-foreground">
+                  {carbsValue.toFixed(1)} ÷ {settings.carbRatio} = {dose.carbDose.toFixed(1)}U
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Raw correction</span>
+                <span className="font-mono text-foreground">
+                  ({bgValue.toFixed(0)} − {settings.targetBg}) ÷ {settings.isf} = {rawCorrection.toFixed(1)}U
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Correction after IOB</span>
+                <span className="font-mono text-foreground">{dose.correction.toFixed(1)}U</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">IOB adjustment</span>
+                <span className="font-mono text-foreground">−{dose.iob.toFixed(1)}U</span>
+              </div>
+              <div className="flex items-center justify-between border-t border-border pt-2">
+                <span className="text-foreground font-semibold">Total</span>
+                <span className="font-mono text-foreground">
+                  {dose.carbDose.toFixed(1)} + {dose.correction.toFixed(1)} − {dose.iob.toFixed(1)} = {dose.totalDose.toFixed(1)}U
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Breakdown */}
         {hasInput && (
@@ -196,6 +304,30 @@ const Calculator = () => {
               }}
             />
           </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">
+              Recommended Dose (units)
+            </label>
+            <input
+              type="number"
+              step="1"
+              inputMode="decimal"
+              className="input-field w-full"
+              placeholder={dose.totalDose.toFixed()}
+              value={parseFloat(totalDoseInput).toFixed() || ""}
+              onChange={(e) => {
+                setTotalDoseInput(e.target.value);
+                setTotalDoseTouched(true);
+              }}
+              onBlur={() => {
+                const value = parseFloat(totalDoseInput);
+                if (Number.isFinite(value)) {
+                  setTotalDoseInput(value.toFixed());
+                }
+              }}
+            />
+          </div>
         </div>
 
         {/* IOB & Settings Summary */}
@@ -238,13 +370,13 @@ const Calculator = () => {
         )}
 
         {/* Nightscout Button */}
-        {hasInput && dose.totalDose > 0 && nsConfigured && (
+        {hasInput && nsConfigured && (
           <button
             onClick={handleLog}
             disabled={logging}
             className="w-full rounded-xl bg-secondary py-3.5 text-sm font-semibold text-secondary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
           >
-            {logging ? "Logging…" : "Log to Nightscout"}
+            {logging ? "Sending…" : "Send to Nightscout"}
           </button>
         )}
       </main>
