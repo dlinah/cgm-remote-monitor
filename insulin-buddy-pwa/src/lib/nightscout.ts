@@ -1,7 +1,31 @@
 // --- Auth helpers ---
 
-function buildHeaders(secret: string): Record<string, string> {
-  const headers: Record<string, string> = { "Content-Type": "application/json", "api_secret": secret };
+import { sha1 } from "js-sha1";
+
+async function sha1Hex(message: string): Promise<string> {
+  const webCrypto = globalThis.crypto;
+
+  if (webCrypto?.subtle && globalThis.isSecureContext) {
+    try {
+      const data = new TextEncoder().encode(message);
+      const hashBuffer = await webCrypto.subtle.digest("SHA-1", data);
+      return Array.from(new Uint8Array(hashBuffer))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
+    } catch {
+      // Fall through to JS implementation below.
+    }
+  }
+
+  return sha1(message);
+}
+
+async function buildHeaders(secret: string): Promise<Record<string, string>> {
+  const hashedSecret = await sha1Hex(secret);
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "api-secret": hashedSecret,
+  };
 
   return headers;
 }
@@ -20,8 +44,8 @@ export async function logToNightscout(
   notes: string
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    const headers =  buildHeaders(secret);
-    const response = await fetch(`${baseUrl(nsUrl)}/api/v1/treatments`, {
+    const headers = await buildHeaders(secret);
+    const response = await fetch(`${baseUrl(nsUrl)}/api/v1/treatments`+`?api_secret=${secret}`, {
       method: "POST",
       headers,
       body: JSON.stringify({
@@ -48,7 +72,7 @@ export async function fetchLatestGlucose(
   secret: string
 ): Promise<{ ok: boolean; sgv?: number; dateString?: string; error?: string }> {
   try {
-    const headers = buildHeaders(secret);
+    const headers = await buildHeaders(secret);
     const res = await fetch(`${baseUrl(nsUrl)}/api/v1/entries.json?count=1`, { headers });
     console.log('...')
     console.log(res)
