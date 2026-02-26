@@ -33,6 +33,7 @@
     "env": "env",
     "postinstall": "webpack --mode production --config webpack/webpack.config.js && npm run-script post-generate-keys",
     "bundle": "webpack --mode production --config webpack/webpack.config.js && npm run-script post-generate-keys",
+    "build": "npm run bundle && npm --prefix insulin-buddy-pwa run build",
     "bundle-dev": "webpack --mode development --config webpack/webpack.config.js && npm run-script post-generate-keys",
     "bundle-analyzer": "webpack --mode development --config webpack/webpack.config.js --profile --json > stats.json && webpack-bundle-analyzer stats.json",
     "post-generate-keys": "node bin/generateRandomString.js >node_modules/.cache/_ns_cache/randomString",

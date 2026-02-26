@@ -44,6 +44,16 @@ echo 'export NS_URL="https://my-cgm.duckdns.org/"' >> .bashrc
        ```
        scp -i "~/.ssh/dia-aws.pem" -r node_modules/.cache/_ns_cache/ ec2-user@ec2-52-23-238-27.compute-1.amazonaws.com:/home/ec2-user/cgm-remote-monitor/node_modules/.cache/
        ```
+     4. build the insulin buddy app locally (served by the server at /calculator)
+         ```
+         cd insulin-buddy-pwa
+         npm i
+         npm run build
+         ```
+     5. upload the build output to the server
+         ```
+         scp -i "~/.ssh/dia-aws.pem" -r dist/ ec2-user@ec2-52-23-238-27.compute-1.amazonaws.com:/home/ec2-user/cgm-remote-monitor/insulin-buddy-pwa/
+         ```
 5.1 install python3 dependencies for dm2nsc
     ```
     python3 -m pip install -r dm2nsc/requirements.txt

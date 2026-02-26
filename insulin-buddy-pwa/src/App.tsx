@@ -14,7 +14,7 @@ const App = () => (
     <TooltipProvider>
       <Sonner />
       <SettingsProvider>
-        <BrowserRouter>
+        <BrowserRouter basename={"/calculator/"}>
           <Routes>
             <Route path="/" element={<Calculator />} />
             <Route path="/settings" element={<SettingsPage />} />
