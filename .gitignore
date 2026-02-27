@@ -11,6 +11,7 @@ my.env
 my.*.env
 *.pem
 .env
+*.tmp
 
 static/bower_components/
 .*.sw?

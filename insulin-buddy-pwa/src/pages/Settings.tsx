@@ -2,11 +2,13 @@ import { useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSettings, Settings as SettingsType } from "@/contexts/SettingsContext";
+import { saveSettingsToDb } from "@/lib/insulinSettings";
 import { toast } from "sonner";
 
 const SettingsPage = () => {
   const { settings, updateSettings } = useSettings();
   const [form, setForm] = useState<SettingsType>({ ...settings });
+  const [saving, setSaving] = useState(false);
 
   const update = (key: keyof SettingsType, value: string) => {
     setForm((prev) => ({
@@ -15,13 +17,20 @@ const SettingsPage = () => {
     }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (form.carbRatio <= 0 || form.isf <= 0 || form.targetBg <= 0) {
       toast.error("Ratios must be greater than 0");
       return;
     }
     updateSettings(form);
-    toast.success("Settings saved");
+    setSaving(true);
+    const result = await saveSettingsToDb(form);
+    setSaving(false);
+    if (result.ok) {
+      toast.success("Settings saved");
+    } else {
+      toast.error(`Saved locally, but sync failed: ${result.error}`);
+    }
   };
 
   return (
@@ -128,9 +137,10 @@ const SettingsPage = () => {
 
         <button
           onClick={handleSave}
+          disabled={saving}
           className="w-full rounded-xl bg-primary py-3.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
         >
-          Save Settings
+          {saving ? "Saving..." : "Save Settings"}
         </button>
       </main>
     </div>
