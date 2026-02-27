@@ -1,5 +1,9 @@
 {
 	"name": "Nightscout",
+	"short_name": "Nightscout",
+	"description": "Nightscout PWA",
+	"start_url": "/calculate",
+	"scope": "/",
 	"icons": [
 		{
 			"src": "\/images\/android-chrome-36x36.png",
@@ -38,5 +42,7 @@
 			"density": "4.0"
 		}
 	],
-	"display": "standalone"
+	"display": "standalone",
+	"background_color": "#ffffff",
+	"theme_color": "#0a6cff"
 }
