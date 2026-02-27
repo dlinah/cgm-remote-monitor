@@ -2,7 +2,7 @@
   "name": "InsulinCalc",
   "short_name": "InsulinCalc",
   "description": "Insulin dose calculator with Nightscout integration",
-  "start_url": "/",
+  "start_url": "/calculator",
   "display": "standalone",
   "background_color": "#f5f7fa",
   "theme_color": "#0ea5e9",
