@@ -17,7 +17,6 @@ const CACHE_LIST = [
     '/images/android-chrome-192x192.png',
     '/images/favicon-96x96.png',
     '/images/favicon-16x16.png',
-    '/manifest.json',
     '/images/favicon.ico',
     '/images/mstile-144x144.png',
     '/css/ui-darkness/jquery-ui.min.css',
