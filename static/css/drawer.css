@@ -283,6 +283,14 @@ h1, legend,
   width: 34px;
 }
 
+#buttonbar #calculateLink {
+  width: auto;
+  padding: 0 8px;
+  margin-left: 5px;
+
+  font-size: 14px;
+}
+
 #buttonbar i {
   padding-left: 12px;
 }
