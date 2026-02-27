@@ -2,9 +2,9 @@
 	"name": "Nightscout",
 	"short_name": "Nightscout",
 	"description": "Nightscout PWA",
-	"start_url": "/calculate?source=pwa",
-	"scope": "/calculate",
-	"id": "/calculate",
+	"start_url": "/calculator?source=pwa",
+	"scope": "/calculator",
+	"id": "/calculator",
 	"icons": [
 		{
 			"src": "\/images\/android-chrome-36x36.png",
