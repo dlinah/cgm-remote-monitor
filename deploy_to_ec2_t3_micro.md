@@ -42,7 +42,7 @@ echo 'export NS_URL="https://my-cgm.duckdns.org/"' >> .bashrc
     2. on your pc, run: nvm use 18 && npm i, it will install the dependencies and run the postinstall script
     3. upload the /node_modules/.cache/_ns_cache file to the ec2 server
        ```
-       scp -i "~/.ssh/dia-aws.pem" -r node_modules/.cache/_ns_cache/ ec2-user@ec2-52-23-238-27.compute-1.amazonaws.com:/home/ec2-user/cgm-remote-monitor/node_modules/.cache/
+       scp -i "~/.ssh/lin-aws.pem" -r node_modules/.cache/_ns_cache/ ec2-user@ec2-3-221-155-62.compute-1.amazonaws.com:/home/ec2-user/cgm-remote-monitor/node_modules/.cache/
        ```
      4. build the insulin buddy app locally (served by the server at /calculator)
          ```
@@ -52,7 +52,7 @@ echo 'export NS_URL="https://my-cgm.duckdns.org/"' >> .bashrc
          ```
      5. upload the build output to the server
          ```
-         scp -i "~/.ssh/dia-aws.pem" -r dist/ ec2-user@ec2-52-23-238-27.compute-1.amazonaws.com:/home/ec2-user/cgm-remote-monitor/insulin-buddy-pwa/
+         scp -i "~/.ssh/lin-aws.pem" -r dist/ ec2-user@ec2-3-221-155-62.compute-1.amazonaws.com:/home/ec2-user/cgm-remote-monitor/insulin-buddy-pwa/
          ```
 5.1 install python3 dependencies for dm2nsc
     ```

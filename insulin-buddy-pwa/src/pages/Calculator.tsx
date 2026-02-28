@@ -102,6 +102,10 @@ const Calculator = () => {
     setLogging(false);
     if (result.ok) {
       toast.success("Logged to Nightscout");
+      setMealCarbs("");
+      setTotalDoseInput("");
+      setTotalDoseTouched(false);
+      fetchFromNightscout();
     } else {
       toast.error(`Failed: ${result.error}`);
     }
@@ -248,8 +252,8 @@ const Calculator = () => {
                     dose.correction > 0
                       ? "hsl(var(--dose-negative))"
                       : dose.correction < 0
-                      ? "hsl(var(--dose-positive))"
-                      : undefined,
+                        ? "hsl(var(--dose-positive))"
+                        : undefined,
                 }}
               >
                 {dose.correction > 0 ? "+" : ""}

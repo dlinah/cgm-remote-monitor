@@ -50,8 +50,6 @@ function fetchData() {
 // Set interval to call fetchData
 setInterval(fetchData, interval);
 
-// Start the Python-based Diabetes-M -> Nightscout sync job scheduler
-require('./dm2nsc/runPyJob');
 
 // Start the main Nightscout server
 require('./lib/server/server');
