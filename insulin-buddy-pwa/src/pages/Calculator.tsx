@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { Settings as SettingsIcon, Droplets, RefreshCw, Loader2 } from "lucide-react";
+import { Settings as SettingsIcon, Droplets, RefreshCw, Loader2, ListChecks, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { calculateDose } from "@/lib/insulin";
@@ -117,6 +117,13 @@ const Calculator = () => {
       <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-md">
         <div className="container flex items-center justify-between py-3">
           <div className="flex items-center gap-2">
+            <a
+              href="/"
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="Back"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </a>
             <Droplets className="h-6 w-6 text-primary" />
             <h1 className="text-lg font-bold text-foreground">InsulinCalc</h1>
           </div>
@@ -135,6 +142,13 @@ const Calculator = () => {
                 )}
               </button>
             )}
+            <Link
+              to="/treatments"
+              className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="Treatments"
+            >
+              <ListChecks className="h-5 w-5" />
+            </Link>
             <Link
               to="/settings"
               className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"

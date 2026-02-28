@@ -3,19 +3,6 @@
 import { sha1 } from "js-sha1";
 
 async function sha1Hex(message: string): Promise<string> {
-  const webCrypto = globalThis.crypto;
-
-  if (webCrypto?.subtle && globalThis.isSecureContext) {
-    try {
-      const data = new TextEncoder().encode(message);
-      const hashBuffer = await webCrypto.subtle.digest("SHA-1", data);
-      return Array.from(new Uint8Array(hashBuffer))
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-    } catch {
-      // Fall through to JS implementation below.
-    }
-  }
 
   return sha1(message);
 }
@@ -104,6 +91,16 @@ interface Treatment {
   eventType?: string;
 }
 
+export interface NsTreatment {
+  _id?: string;
+  eventType?: string;
+  created_at: string;
+  insulin?: number;
+  carbs?: number;
+  notes?: string;
+  enteredBy?: string;
+}
+
 /**
  * Fetches recent bolus treatments and calculates remaining IOB
  * using a simple linear decay model over `durationHours`.
@@ -166,6 +163,65 @@ export async function fetchIOB(
     };
   } catch (e: any) {
     console.error("fetchIOB error:", e);
+    return { ok: false, error: e.message || "Network error" };
+  }
+}
+
+// --- Treatments list / update / delete ---
+
+export async function fetchTreatments(
+  nsUrl: string,
+  secret: string,
+  count: number = 50
+): Promise<{ ok: boolean; treatments?: NsTreatment[]; error?: string }> {
+  try {
+    const headers = await buildHeaders(secret);
+    const res = await fetch(`${baseUrl(nsUrl)}/api/v1/treatments.json?count=${count}`, { headers });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    const treatments: NsTreatment[] = await res.json();
+    return { ok: true, treatments };
+  } catch (e: any) {
+    console.error("fetchTreatments error:", e);
+    return { ok: false, error: e.message || "Network error" };
+  }
+}
+
+export async function updateTreatment(
+  nsUrl: string,
+  secret: string,
+  id: string,
+  update: Partial<NsTreatment>
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const headers = await buildHeaders(secret);
+    const res = await fetch(`${baseUrl(nsUrl)}/api/v1/treatments/${id}`, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify(update),
+    });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    return { ok: true };
+  } catch (e: any) {
+    console.error("updateTreatment error:", e);
+    return { ok: false, error: e.message || "Network error" };
+  }
+}
+
+export async function deleteTreatment(
+  nsUrl: string,
+  secret: string,
+  id: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const headers = await buildHeaders(secret);
+    const res = await fetch(`${baseUrl(nsUrl)}/api/v1/treatments/${id}`, {
+      method: "DELETE",
+      headers,
+    });
+    if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+    return { ok: true };
+  } catch (e: any) {
+    console.error("deleteTreatment error:", e);
     return { ok: false, error: e.message || "Network error" };
   }
 }

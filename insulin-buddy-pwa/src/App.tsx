@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { SettingsProvider } from "@/contexts/SettingsContext";
 import Calculator from "./pages/Calculator";
 import SettingsPage from "./pages/Settings";
+import TreatmentsPage from "./pages/Treatments";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -18,6 +19,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Calculator />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/treatments" element={<TreatmentsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
