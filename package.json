@@ -38,7 +38,9 @@
     "bundle-analyzer": "webpack --mode development --config webpack/webpack.config.js --profile --json > stats.json && webpack-bundle-analyzer stats.json",
     "post-generate-keys": "node bin/generateRandomString.js >node_modules/.cache/_ns_cache/randomString",
     "coverage": "cat ./coverage/lcov.info | env-cmd -f ./tests/ci.test.env codacy-coverage || echo NO COVERAGE",
-    "dev": "env-cmd -f ./my.env nodemon --inspect lib/server/server.js 0.0.0.0",
+    "dev": "concurrently -k -n server,pwa -c green,cyan \"env-cmd -f ./my.env nodemon --inspect lib/server/server.js 0.0.0.0\" \"npm --prefix insulin-buddy-pwa run dev\"",
+    "dev:server": "env-cmd -f ./my.env nodemon --inspect lib/server/server.js 0.0.0.0",
+    "dev:pwa": "npm --prefix insulin-buddy-pwa run dev",
     "dev-test": "env-cmd -f ./my.devtest.env nodemon --inspect lib/server/server.js 0.0.0.0",
     "prod": "env-cmd -f ./my.prod.env node lib/server/server.js 0.0.0.0",
     "lint": "eslint lib"
@@ -157,6 +159,7 @@
     "should": "^13.2.3",
     "supertest": "^3.4.2",
     "webpack-bundle-analyzer": "^4.5.0",
+    "concurrently": "^9.2.1",
     "webpack-dev-middleware": "^4.3.0",
     "webpack-hot-middleware": "^2.25.2",
     "xml2js": "^0.4.23"

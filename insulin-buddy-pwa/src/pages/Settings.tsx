@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSettings, Settings as SettingsType } from "@/contexts/SettingsContext";
-import { saveSettingsToDb } from "@/lib/insulinSettings";
+import { saveSettingsToDb, stripNightscoutFromSettings } from "@/lib/insulinSettings";
 import { toast } from "sonner";
 
 const SettingsPage = () => {
   const { settings, updateSettings } = useSettings();
   const [form, setForm] = useState<SettingsType>({ ...settings });
   const [saving, setSaving] = useState(false);
+  const [savingNightscout, setSavingNightscout] = useState(false);
+
+  useEffect(() => {
+    setForm({ ...settings });
+  }, [settings]);
 
   const update = (key: keyof SettingsType, value: string) => {
     setForm((prev) => ({
@@ -24,13 +29,29 @@ const SettingsPage = () => {
     }
     updateSettings(form);
     setSaving(true);
-    const result = await saveSettingsToDb(form);
+    const result = await saveSettingsToDb(
+      stripNightscoutFromSettings(form),
+      form.nightscoutUrl,
+      form.nightscoutSecret
+    );
     setSaving(false);
     if (result.ok) {
       toast.success("Settings saved");
     } else {
-      toast.error(`Saved locally, but sync failed: ${result.error}`);
+      console.error("Settings save failed", result.error);
+      toast.error(`Save failed: ${result.error}`);
     }
+  };
+
+  const handleSaveNightscout = () => {
+    setSavingNightscout(true);
+    updateSettings({
+      ...settings,
+      nightscoutUrl: form.nightscoutUrl,
+      nightscoutSecret: form.nightscoutSecret,
+    });
+    setSavingNightscout(false);
+    toast.success("Nightscout settings saved locally");
   };
 
   return (
@@ -133,6 +154,14 @@ const SettingsPage = () => {
               onChange={(e) => update("nightscoutSecret", e.target.value)}
             />
           </div>
+
+          <button
+            onClick={handleSaveNightscout}
+            disabled={savingNightscout}
+            className="w-full rounded-xl border border-border bg-card py-3 text-sm font-semibold text-foreground transition-all hover:bg-muted active:scale-[0.98]"
+          >
+            {savingNightscout ? "Saving..." : "Save Nightscout"}
+          </button>
         </div>
 
         <button

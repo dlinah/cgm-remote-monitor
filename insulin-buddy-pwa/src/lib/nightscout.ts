@@ -20,7 +20,7 @@ async function sha1Hex(message: string): Promise<string> {
   return sha1(message);
 }
 
-async function buildHeaders(secret: string): Promise<Record<string, string>> {
+export async function buildHeaders(secret: string): Promise<Record<string, string>> {
   const hashedSecret = await sha1Hex(secret);
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -30,8 +30,8 @@ async function buildHeaders(secret: string): Promise<Record<string, string>> {
   return headers;
 }
 
-function baseUrl(url: string) {
-  return url.replace(/\/+$/, "");
+export function baseUrl(url: string) {
+  return url?.replace(/\/+$/, "");
 }
 
 // --- Log treatment ---
@@ -45,7 +45,7 @@ export async function logToNightscout(
 ): Promise<{ ok: boolean; error?: string }> {
   try {
     const headers = await buildHeaders(secret);
-    const response = await fetch(`${baseUrl(nsUrl)}/api/v1/treatments`+`?api_secret=${secret}`, {
+    const response = await fetch(`${baseUrl(nsUrl)}/api/v1/treatments` + `?api_secret=${secret}`, {
       method: "POST",
       headers,
       body: JSON.stringify({
@@ -128,9 +128,9 @@ export async function fetchIOB(
       `${baseUrl(nsUrl)}/api/v1/treatments.json?count=100&find[created_at][$gte]=${encodeURIComponent(since)}&find[insulin][$gt]=0`,
       { headers }
     );
-    
+
     if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
-    
+
     const treatments: Treatment[] = await res.json();
     console.log('fetchIOB response:', treatments);
     const now = Date.now();
