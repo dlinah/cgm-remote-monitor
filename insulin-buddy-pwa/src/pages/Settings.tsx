@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSettings, Settings as SettingsType } from "@/contexts/SettingsContext";
 import { saveSettingsToDb, stripNightscoutFromSettings } from "@/lib/insulinSettings";
 import { toast } from "sonner";
 
 const SettingsPage = () => {
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, profiles, activeProfileId, switchProfile, addProfile, deleteProfile } = useSettings();
   const [form, setForm] = useState<SettingsType>({ ...settings });
   const [saving, setSaving] = useState(false);
   const [savingNightscout, setSavingNightscout] = useState(false);
+  const [newProfileName, setNewProfileName] = useState("");
+  const [addingProfile, setAddingProfile] = useState(false);
 
   useEffect(() => {
     setForm({ ...settings });
@@ -54,6 +56,23 @@ const SettingsPage = () => {
     toast.success("Nightscout settings saved locally");
   };
 
+  const handleAddProfile = () => {
+    const name = newProfileName.trim();
+    if (!name) return;
+    addProfile(name);
+    setNewProfileName("");
+    setAddingProfile(false);
+  };
+
+  const handleDeleteProfile = () => {
+    if (profiles.length <= 1) return;
+    const profile = profiles.find((p) => p.id === activeProfileId);
+    if (!confirm(`Delete profile "${profile?.name}"?`)) return;
+    deleteProfile(activeProfileId);
+  };
+
+  const activeProfile = profiles.find((p) => p.id === activeProfileId);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-10 border-b border-border bg-card/80 backdrop-blur-md">
@@ -69,6 +88,77 @@ const SettingsPage = () => {
       </header>
 
       <main className="container max-w-lg py-6 space-y-5 animate-fade-in">
+        {/* Profiles */}
+        <div className="section-card space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Profiles</h2>
+
+          <div className="space-y-2">
+            {profiles.map((p) => (
+              <button
+                key={p.id}
+                data-profile-id={p.id}
+                onClick={() => switchProfile(p.id)}
+                className={`w-full flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition-colors ${
+                  p.id === activeProfileId
+                    ? "border-primary bg-primary/10 text-primary font-semibold"
+                    : "border-border bg-card text-foreground hover:bg-muted"
+                }`}
+              >
+                <span>{p.name}</span>
+                {p.id === activeProfileId && <Check className="h-4 w-4" />}
+              </button>
+            ))}
+          </div>
+
+          {addingProfile ? (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="input-field flex-1"
+                placeholder="Profile name"
+                value={newProfileName}
+                autoFocus
+                onChange={(e) => setNewProfileName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleAddProfile(); if (e.key === "Escape") setAddingProfile(false); }}
+                data-testid="new-profile-input"
+              />
+              <button
+                onClick={handleAddProfile}
+                disabled={!newProfileName.trim()}
+                className="rounded-lg border border-primary bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary disabled:opacity-50"
+              >
+                Create
+              </button>
+              <button
+                onClick={() => { setAddingProfile(false); setNewProfileName(""); }}
+                className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setAddingProfile(true)}
+                className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                New Profile
+              </button>
+              {profiles.length > 1 && (
+                <button
+                  onClick={handleDeleteProfile}
+                  className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10"
+                  data-testid="delete-profile-btn"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete "{activeProfile?.name}"
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+
         {/* Insulin Parameters */}
         <div className="section-card space-y-4">
           <h2 className="text-sm font-semibold text-foreground">Insulin Parameters</h2>

@@ -7,7 +7,8 @@ import { logToNightscout, fetchLatestGlucose, fetchIOB } from "@/lib/nightscout"
 import { toast } from "sonner";
 
 const Calculator = () => {
-  const { settings } = useSettings();
+  const { settings, profiles, activeProfileId } = useSettings();
+  const activeProfileName = profiles.find((p) => p.id === activeProfileId)?.name ?? "Default";
   const [mealCarbs, setMealCarbs] = useState("");
   const [currentBg, setCurrentBg] = useState("");
   const [iob, setIob] = useState(0);
@@ -91,7 +92,7 @@ const Calculator = () => {
     }
     setLogging(true);
     const totalValue = parseFloat(totalDoseInput);
-    const safeTotal = Number.isFinite(totalValue) ? totalValue : 0;
+    const safeTotal = Number.isFinite(totalValue) ? Math.round(totalValue) : 0;
     const result = await logToNightscout(
       settings.nightscoutUrl,
       settings.nightscoutSecret,
@@ -103,6 +104,8 @@ const Calculator = () => {
     if (result.ok) {
       toast.success("Logged to Nightscout");
       setMealCarbs("");
+      setCurrentBg("");
+      setBgAge(null);
       setTotalDoseInput("");
       setTotalDoseTouched(false);
       fetchFromNightscout();
@@ -285,6 +288,17 @@ const Calculator = () => {
           </div>
         )}
 
+        {/* Nightscout Button */}
+        {nsConfigured && (
+          <button
+            onClick={handleLog}
+            disabled={logging || !hasInput}
+            className="w-full rounded-xl bg-secondary py-3.5 text-sm font-semibold text-secondary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
+          >
+            {logging ? "Sending…" : "Send to Nightscout"}
+          </button>
+        )}
+
         {/* Inputs */}
         <div className="section-card space-y-4">
           <h2 className="text-sm font-semibold text-foreground">Meal & Glucose</h2>
@@ -350,7 +364,10 @@ const Calculator = () => {
 
         {/* IOB & Settings Summary */}
         <div className="section-card">
-          <h2 className="text-sm font-semibold text-foreground mb-3">Active Parameters</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-foreground">Active Parameters</h2>
+            <span className="text-xs text-muted-foreground" data-testid="active-profile-name">{activeProfileName}</span>
+          </div>
           <div className="grid grid-cols-4 gap-3 text-center">
             <div>
               <p className="text-xs text-muted-foreground">IOB</p>
@@ -385,17 +402,6 @@ const Calculator = () => {
               to auto-fetch BG & IOB
             </p>
           </div>
-        )}
-
-        {/* Nightscout Button */}
-        {hasInput && nsConfigured && (
-          <button
-            onClick={handleLog}
-            disabled={logging}
-            className="w-full rounded-xl bg-secondary py-3.5 text-sm font-semibold text-secondary-foreground transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
-          >
-            {logging ? "Sending…" : "Send to Nightscout"}
-          </button>
         )}
       </main>
     </div>
