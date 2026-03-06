@@ -20,6 +20,7 @@ const Calculator = () => {
   const [logging, setLogging] = useState(false);
   const [fetching, setFetching] = useState(false);
   const [bgAge, setBgAge] = useState<string | null>(null);
+  const [doseLogged, setDoseLogged] = useState(false);
 
   const nsConfigured = Boolean(settings.nightscoutUrl && settings.nightscoutSecret);
 
@@ -55,7 +56,15 @@ const Calculator = () => {
   }, [settings, nsConfigured]);
 
   useEffect(() => {
+    if ("Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  useEffect(() => {
     fetchFromNightscout();
+    const interval = setInterval(fetchFromNightscout, 5 * 60 * 1000);
+    return () => clearInterval(interval);
   }, [fetchFromNightscout]);
 
   const dose = useMemo(() => {
@@ -81,7 +90,23 @@ const Calculator = () => {
     if (!totalDoseTouched) {
       setTotalDoseInput(dose.totalDose.toFixed(1));
     }
-  }, [dose.totalDose, totalDoseTouched]);
+  }, [dose.totalDose, dose.carbsNeeded, totalDoseTouched]);
+
+  useEffect(() => {
+    if (!("Notification" in window) || Notification.permission !== "granted") return;
+    if (dose.totalDose < 3 || doseLogged) return;
+
+    const notify = () => {
+      new Notification("Insulin Reminder", {
+        body: `Recommended dose: ${dose.totalDose.toFixed(1)} units`,
+        icon: "/icon-192.png",
+      });
+    };
+
+    notify();
+    const interval = setInterval(notify, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [dose.totalDose, doseLogged]);
 
   const hasInput = parseFloat(mealCarbs) > 0 || parseFloat(currentBg) > 0;
 
@@ -103,6 +128,7 @@ const Calculator = () => {
     setLogging(false);
     if (result.ok) {
       toast.success("Logged to Nightscout");
+      setDoseLogged(true);
       setMealCarbs("");
       setCurrentBg("");
       setBgAge(null);
@@ -172,12 +198,23 @@ const Calculator = () => {
           aria-controls="dose-details"
         >
           <p className="dose-label mb-2">Recommended Dose</p>
-          <p className="dose-value">{hasInput ? dose.totalDose.toFixed(1) : "—"}</p>
+          <p className="dose-value">{dose.totalDose.toFixed(1)}</p>
           <p className="mt-1 text-sm text-muted-foreground">units</p>
           <p className="mt-2 text-xs text-muted-foreground">
             {showDoseDetails ? "Hide calculation details" : "Show calculation details"}
           </p>
         </button>
+
+        {/* Carb recommendation card */}
+        {hasInput && dose.carbsNeeded > 0 && (
+          <div className="section-card text-center animate-fade-in border-amber-400/50 bg-amber-50/10">
+            <p className="dose-label mb-2">Eat Carbs</p>
+            <p className="dose-value" style={{ color: "hsl(var(--dose-positive))" }}>
+              {dose.carbsNeeded.toFixed(0)}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">grams — BG is low, no insulin needed</p>
+          </div>
+        )}
 
         {/* Dose Details */}
         {hasInput && showDoseDetails && (
@@ -289,7 +326,7 @@ const Calculator = () => {
         )}
 
         {/* Nightscout Button */}
-        {nsConfigured && (
+        {nsConfigured && !dose.carbsNeeded && (
           <button
             onClick={handleLog}
             disabled={logging || !hasInput}
@@ -311,7 +348,7 @@ const Calculator = () => {
               className="input-field w-full"
               placeholder="0"
               value={mealCarbs}
-              onChange={(e) => setMealCarbs(e.target.value)}
+              onChange={(e) => { setMealCarbs(e.target.value); setDoseLogged(false); }}
             />
           </div>
 

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "WebFetch(domain:localhost)",
+      "Bash(npx cypress:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

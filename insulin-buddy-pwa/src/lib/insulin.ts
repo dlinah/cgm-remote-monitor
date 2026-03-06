@@ -3,6 +3,7 @@ export interface DoseResult {
   correction: number;
   iob: number;
   totalDose: number;
+  carbsNeeded: number;
 }
 
 export function calculateDose(
@@ -28,12 +29,15 @@ export function calculateDose(
     correction = correction - iobCorr;
   }
 
-  const totalDose = carbDose + correction;
+  const rawTotal = carbDose + correction;
+  const carbsNeeded = rawTotal < 0 ? Math.round(Math.abs(rawTotal) * carbRatio * 100) / 100 : 0;
+  const totalDose = rawTotal < 0 ? 0 : rawTotal;
 
   return {
     carbDose: Math.round(carbDose * 100) / 100,
     correction: Math.round(correction * 100) / 100,
     iob: Math.round(iob * 100) / 100,
     totalDose: Math.round(totalDose * 100) / 100,
+    carbsNeeded,
   };
 }
