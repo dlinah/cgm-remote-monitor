@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "WebFetch(domain:localhost)",
+      "Bash(npx cypress:*)",
+      "Bash(npm run:*)",
+      "Edit",
+      "Write",
+      "WebSearch",
+      "Read(//Users/linah/repos/cgm-remote-monitor/)",
+      "Write(//Users/linah/repos/cgm-remote-monitor/)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:d[k] for k in [''dependencies''] if k in d}, indent=2\\)\\)\")",
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

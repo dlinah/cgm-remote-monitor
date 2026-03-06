@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Plus, Trash2, Bell, BellOff } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSettings, Settings as SettingsType } from "@/contexts/SettingsContext";
 import { saveSettingsToDb, stripNightscoutFromSettings } from "@/lib/insulinSettings";
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
 import { toast } from "sonner";
 
 const SettingsPage = () => {
@@ -12,6 +13,31 @@ const SettingsPage = () => {
   const [savingNightscout, setSavingNightscout] = useState(false);
   const [newProfileName, setNewProfileName] = useState("");
   const [addingProfile, setAddingProfile] = useState(false);
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    isPushSubscribed().then(setPushSubscribed);
+  }, []);
+
+  const handleTogglePush = async () => {
+    const nsConfigured = Boolean(settings.nightscoutUrl && settings.nightscoutSecret);
+    if (!nsConfigured) {
+      toast.error("Save Nightscout settings first");
+      return;
+    }
+    setPushLoading(true);
+    if (pushSubscribed) {
+      const result = await unsubscribeFromPush(settings.nightscoutUrl, settings.nightscoutSecret);
+      if (result.ok) { setPushSubscribed(false); toast.success("Background alerts disabled"); }
+      else toast.error(result.error || "Failed to unsubscribe");
+    } else {
+      const result = await subscribeToPush(settings.nightscoutUrl, settings.nightscoutSecret);
+      if (result.ok) { setPushSubscribed(true); toast.success("Background alerts enabled"); }
+      else toast.error(result.error || "Failed to enable alerts");
+    }
+    setPushLoading(false);
+  };
 
   useEffect(() => {
     setForm({ ...settings });
@@ -251,6 +277,27 @@ const SettingsPage = () => {
             className="w-full rounded-xl border border-border bg-card py-3 text-sm font-semibold text-foreground transition-all hover:bg-muted active:scale-[0.98]"
           >
             {savingNightscout ? "Saving..." : "Save Nightscout"}
+          </button>
+        </div>
+
+        {/* Background Alerts */}
+        <div className="section-card space-y-3">
+          <h2 className="text-sm font-semibold text-foreground">Background Alerts</h2>
+          <p className="text-xs text-muted-foreground">
+            Receive push notifications when a dose ≥ 3U is recommended, even when the app is in the background.
+            {" "}iOS requires the app to be installed to your home screen.
+          </p>
+          <button
+            onClick={handleTogglePush}
+            disabled={pushLoading}
+            className={`w-full flex items-center justify-center gap-2 rounded-xl border py-3 text-sm font-semibold transition-all active:scale-[0.98] ${
+              pushSubscribed
+                ? "border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20"
+                : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20"
+            }`}
+          >
+            {pushSubscribed ? <BellOff className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
+            {pushLoading ? "..." : pushSubscribed ? "Disable Background Alerts" : "Enable Background Alerts"}
           </button>
         </div>
 

@@ -1,9 +1,10 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { Settings as SettingsIcon, Droplets, RefreshCw, Loader2, ListChecks, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useSettings } from "@/contexts/SettingsContext";
 import { calculateDose } from "@/lib/insulin";
 import { logToNightscout, fetchLatestGlucose, fetchIOB } from "@/lib/nightscout";
+import { sendPushNotification } from "@/lib/push";
 import { toast } from "sonner";
 
 const Calculator = () => {
@@ -21,6 +22,7 @@ const Calculator = () => {
   const [fetching, setFetching] = useState(false);
   const [bgAge, setBgAge] = useState<string | null>(null);
   const [doseLogged, setDoseLogged] = useState(false);
+  const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const nsConfigured = Boolean(settings.nightscoutUrl && settings.nightscoutSecret);
 
@@ -55,11 +57,6 @@ const Calculator = () => {
     setFetching(false);
   }, [settings, nsConfigured]);
 
-  useEffect(() => {
-    if ("Notification" in window && Notification.permission === "default") {
-      Notification.requestPermission();
-    }
-  }, []);
 
   useEffect(() => {
     fetchFromNightscout();
@@ -93,20 +90,48 @@ const Calculator = () => {
   }, [dose.totalDose, dose.carbsNeeded, totalDoseTouched]);
 
   useEffect(() => {
-    if (!("Notification" in window) || Notification.permission !== "granted") return;
-    if (dose.totalDose < 3 || doseLogged) return;
+    if (dose.totalDose < 3 || doseLogged) {
+      if (alarmIntervalRef.current) {
+        clearInterval(alarmIntervalRef.current);
+        alarmIntervalRef.current = null;
+      }
+      return;
+    }
 
-    const notify = () => {
-      new Notification("Insulin Reminder", {
-        body: `Recommended dose: ${dose.totalDose.toFixed(1)} units`,
-        icon: "/icon-192.png",
-      });
+    const playAlarm = () => {
+      const ctx = new AudioContext();
+      const beep = (startTime: number, freq: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = "sine";
+        gain.gain.setValueAtTime(0.6, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      };
+      beep(ctx.currentTime, 880, 0.15);
+      beep(ctx.currentTime + 0.2, 880, 0.15);
+      beep(ctx.currentTime + 0.4, 1100, 0.3);
+      setTimeout(() => ctx.close(), 1500);
     };
 
-    notify();
-    const interval = setInterval(notify, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, [dose.totalDose, doseLogged]);
+    playAlarm();
+    if (nsConfigured) sendPushNotification(settings.nightscoutUrl, settings.nightscoutSecret, dose.totalDose);
+
+    alarmIntervalRef.current = setInterval(() => {
+      playAlarm();
+      if (nsConfigured) sendPushNotification(settings.nightscoutUrl, settings.nightscoutSecret, dose.totalDose);
+    }, 5 * 60 * 1000);
+    return () => {
+      if (alarmIntervalRef.current) {
+        clearInterval(alarmIntervalRef.current);
+        alarmIntervalRef.current = null;
+      }
+    };
+  }, [dose.totalDose, doseLogged, nsConfigured, settings]);
 
   const hasInput = parseFloat(mealCarbs) > 0 || parseFloat(currentBg) > 0;
 
